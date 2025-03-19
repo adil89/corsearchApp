@@ -1,75 +1,21 @@
-# .github/workflows/deploy-to-aws.yml
-
-name: Deploy to AWS S3
+name: Upload Website
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+    branches:
+    - main
 
 jobs:
-  build-and-test:
+  deploy:
     runs-on: ubuntu-latest
-    
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Set up Node.js
-      uses: actions/setup-node@v3
+    - uses: actions/checkout@master
+    - uses: jakejarvis/s3-sync-action@master
       with:
-        node-version: '18'
-        cache: 'npm'
-    
-    - name: Install dependencies
-      run: npm ci
-    
-    - name: Lint
-      run: npm run lint
-    
-    - name: Type check
-      run: npm run type-check
-    
-    - name: Run tests
-      run: npm run test
-    
-    - name: Build
-      run: npm run build
+        args: --acl public-read --follow-symlinks --delete
       env:
-        REACT_APP_GEODB_API_KEY: ${{ secrets.REACT_APP_GEODB_API_KEY }}
-    
-    - name: Upload build artifact
-      uses: actions/upload-artifact@v3
-      with:
-        name: build
-        path: build/
-        retention-days: 1
-
-  deploy-to-s3:
-    needs: build-and-test
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Download build artifact
-      uses: actions/download-artifact@v3
-      with:
-        name: build
-        path: build
-    
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v2
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ secrets.AWS_REGION }}
-    
-    - name: Deploy to S3
-      run: |
-        aws s3 sync build/ s3://${{ secrets.S3_BUCKET_NAME }} --delete
-    
-    # Optional: Invalidate CloudFront distribution if you're using CloudFront
-    - name: Invalidate CloudFront distribution
-      if: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID != '' }}
-      run: |
-        aws cloudfront create-invalidation --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} --paths "/*"
+        AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        AWS_REGION: 'us-west-1'   # optional: defaults to us-east-1
+        SOURCE_DIR: 'public'      # optional: defaults to entire repository
