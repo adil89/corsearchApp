@@ -1,4 +1,4 @@
-name: Upload Static Website to S3
+name: Check Repository Structure
 
 on:
   push:
@@ -6,49 +6,16 @@ on:
     - main
 
 jobs:
-  deploy:
+  check-directories:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
     
-    # Configure AWS credentials
-    - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v2
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: us-west-1
-    
-    # Check for the directory you want to deploy
-    - name: Check directory structure
+    # List all files and directories in the repository
+    - name: List repository contents
       run: |
-        echo "Repository contents:"
+        echo "Repository root contents:"
         ls -la
         
-        # Check for common directories that might contain static web files
-        echo "Checking potential static directories:"
-        for dir in build dist public www static; do
-          if [ -d "$dir" ]; then
-            echo "✅ $dir directory exists"
-          else
-            echo "❌ $dir directory doesn't exist"
-          fi
-        done
-    
-    # Deploy to S3 directly using AWS CLI
-    # Change the SOURCE_DIR to the directory that actually exists in your repository
-    - name: Deploy to S3
-      run: |
-        # Replace 'public' with whichever directory actually exists in your repository
-        # Options: build, dist, public, www, or static
-        SOURCE_DIR="public"
-        
-        if [ -d "$SOURCE_DIR" ]; then
-          echo "Deploying $SOURCE_DIR directory to S3..."
-          aws s3 sync $SOURCE_DIR/ s3://${{ secrets.AWS_S3_BUCKET }} --delete --acl public-read
-          echo "Deployment successful!"
-        else
-          echo "Error: $SOURCE_DIR directory doesn't exist!"
-          echo "Please update the workflow to use a directory that exists in your repository."
-          exit 1
-        fi
+        echo "\nRecursively listing all directories:"
+        find . -type d -not -path "./node_modules/*" -not -path "./.git/*" | sort
