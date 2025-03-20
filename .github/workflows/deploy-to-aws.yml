@@ -47,7 +47,8 @@ jobs:
       - name: Deploy to S3
         run: |
           if [ -d "dist" ]; then
-            aws s3 sync dist/ s3://${{ secrets.AWS_S3_BUCKET }} --delete --acl public-read
+            # Removed the --acl public-read flag
+            aws s3 sync dist/ s3://${{ secrets.AWS_S3_BUCKET }} --delete
             echo "Deployment successful!"
           else
             echo "Error: dist directory not found. Build may have failed."
