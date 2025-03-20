@@ -15,11 +15,13 @@ jobs:
       uses: actions/setup-node@v3
       with:
         node-version: '18'
-        cache: 'npm'
+        # Temporarily removing cache to avoid integrity issues
+        # cache: 'npm'
     
-    - name: Install dependencies
-      run: npm install
-      # Using 'npm install' instead of 'npm ci' to resolve package-lock.json conflicts
+    - name: Clear npm cache and install dependencies
+      run: |
+        npm cache clean --force
+        npm install --no-audit --prefer-offline=false
     
     - name: Build
       run: npm run build
