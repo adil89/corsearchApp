@@ -1,4 +1,4 @@
-name: Check Repository Structure
+name: Build and Deploy to S3
 
 on:
   push:
@@ -6,16 +6,50 @@ on:
     - main
 
 jobs:
-  check-directories:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    
-    # List all files and directories in the repository
-    - name: List repository contents
-      run: |
-        echo "Repository root contents:"
-        ls -la
-        
-        echo "\nRecursively listing all directories:"
-        find . -type d -not -path "./node_modules/*" -not -path "./.git/*" | sort
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      # Use pnpm instead of npm to avoid integrity check issues
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+      
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+      
+      - name: Build
+        run: pnpm build
+        env:
+          # Add any environment variables your build needs
+          VITE_GEODB_API_KEY: ${{ secrets.VITE_GEODB_API_KEY }}
+      
+      - name: List build directory
+        run: |
+          echo "Build output directory (should be 'dist'):"
+          ls -la dist || echo "dist directory not found!"
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-1
+      
+      - name: Deploy to S3
+        run: |
+          if [ -d "dist" ]; then
+            aws s3 sync dist/ s3://${{ secrets.AWS_S3_BUCKET }} --delete --acl public-read
+            echo "Deployment successful!"
+          else
+            echo "Error: dist directory not found. Build may have failed."
+            exit 1
+          fi
