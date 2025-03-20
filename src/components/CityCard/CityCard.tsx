@@ -6,6 +6,7 @@ interface CityCardProps {
   onSelect: (city: City) => void;
 }
  //test pipeline
+ // second test 
 export function CityCard({ city, onSelect }: CityCardProps) {
   return (
     <div 
