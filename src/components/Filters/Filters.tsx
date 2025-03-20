@@ -230,7 +230,7 @@ export function Filters({
         <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Population Range
+              Population Rangeeee
             </label>
             <div className="flex gap-2">
               <input
