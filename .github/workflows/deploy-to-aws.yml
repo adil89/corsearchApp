@@ -1,4 +1,4 @@
-name: Upload Website
+name: Upload Static Website to S3
 
 on:
   push:
@@ -9,39 +9,46 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@master
+    - uses: actions/checkout@v3
     
-    - name: Set up Node.js
-      uses: actions/setup-node@v3
+    # Configure AWS credentials
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v2
       with:
-        node-version: '18'
-        # Temporarily removing cache to avoid integrity issues
-        # cache: 'npm'
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-west-1
     
-    - name: Clear npm cache and install dependencies
+    # Check for the directory you want to deploy
+    - name: Check directory structure
       run: |
-        npm cache clean --force
-        npm install --no-audit --prefer-offline=false
-    
-    - name: Build
-      run: npm run build
-      env:
-        REACT_APP_GEODB_API_KEY: ${{ secrets.REACT_APP_GEODB_API_KEY }}
-    
-    - name: Debug directory content
-      run: |
-        echo "Current directory:"
+        echo "Repository contents:"
         ls -la
-        echo "Build directory:"
-        ls -la build || echo "Build directory doesn't exist!"
+        
+        # Check for common directories that might contain static web files
+        echo "Checking potential static directories:"
+        for dir in build dist public www static; do
+          if [ -d "$dir" ]; then
+            echo "✅ $dir directory exists"
+          else
+            echo "❌ $dir directory doesn't exist"
+          fi
+        done
     
+    # Deploy to S3 directly using AWS CLI
+    # Change the SOURCE_DIR to the directory that actually exists in your repository
     - name: Deploy to S3
-      uses: jakejarvis/s3-sync-action@master
-      with:
-        args: --acl public-read --follow-symlinks --delete
-      env:
-        AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        AWS_REGION: 'us-west-1'
-        SOURCE_DIR: 'build'
+      run: |
+        # Replace 'public' with whichever directory actually exists in your repository
+        # Options: build, dist, public, www, or static
+        SOURCE_DIR="public"
+        
+        if [ -d "$SOURCE_DIR" ]; then
+          echo "Deploying $SOURCE_DIR directory to S3..."
+          aws s3 sync $SOURCE_DIR/ s3://${{ secrets.AWS_S3_BUCKET }} --delete --acl public-read
+          echo "Deployment successful!"
+        else
+          echo "Error: $SOURCE_DIR directory doesn't exist!"
+          echo "Please update the workflow to use a directory that exists in your repository."
+          exit 1
+        fi
